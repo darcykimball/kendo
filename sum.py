@@ -52,7 +52,6 @@ class SumProcess():
 
 if __name__ == "__main__":
     import kendo
-    import sharedmem
 
     print "Testing SumProcess..."
 
