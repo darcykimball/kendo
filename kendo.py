@@ -10,6 +10,7 @@ class Kendo():
     clocks    - deterministic logical times for each process
     lrlt_list - last release times for each lock
     lock_held_list - list of which locks are held/free
+    shared_mem - shared memory map
     """
 
     def __init__(self, max_processes, num_locks, debug = False):
@@ -32,6 +33,9 @@ class Kendo():
         # Initialize all locks that could be used
         manager = multiprocessing.Manager()
         self.locks = [manager.Lock() for i in xrange(num_locks)]
+
+        # Initialize shared memory
+        self.shared_mem = manager.dict()
         
         # Initialize deterministic logical clocks
         self.clocks = manager.list([0] * max_processes)
@@ -192,7 +196,16 @@ class Kendo():
         if len(self.processes) < self.max_processes:
             self.processes.append(process)
             return len(self.processes) - 1
+    
+    def mutate_shared(self, name, value):
+        """Add/mutate a shared object to simulate shared memory.
 
+        Args:
+        name - name of the value
+        value - value
+        """
+        
+        self.shared_mem[name] = value
 
 if __name__ == "__main__":
     pass
