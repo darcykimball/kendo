@@ -67,8 +67,10 @@ if __name__ == "__main__":
     import kendo
 
     print "Testing SumProcess..."
-
-    kendo_arbitrator = kendo.Kendo(max_processes=4, num_locks=1, debug=True)
+    
+    priorities = [4,3,2,1]
+    kendo_arbitrator = kendo.Kendo(max_processes=4, num_locks=1, debug=True, \
+        priorities=priorities)
 
     process1 = SumProcess(kendo_arbitrator, 0, xrange(10000), work_time=random.random())
     process2 = SumProcess(kendo_arbitrator, 0, xrange(10000, 20000), work_time=random.random())

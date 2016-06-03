@@ -11,15 +11,17 @@ class Kendo():
     lrlt_list - last release times for each lock
     lock_held_list - list of which locks are held/free
     shared_mem - shared memory map
+    priorities - thread 'priorities' for acquiring locks
     """
 
-    def __init__(self, max_processes, num_locks, debug = False):
+    def __init__(self, max_processes, num_locks, priorities=None, debug = False):
         """Initialize a Kendo arbitrator.
 
         Args:
         max_processes - the maximum possible number of processes that will run
         num_locks     - number of locks available to all processes
         debug         - whether or not to be verbose
+        priorities    - iterable of thread priorities
         """
 
         # Create a global mutex for bookkeeping and dumping debug messages
@@ -29,6 +31,13 @@ class Kendo():
         self.num_locks = num_locks
         self.max_processes = max_processes
         self.processes = []
+
+        # Initialize priorities. By default, every thread has the same
+        # priority
+        if priorities is None:
+            priorities = [1 for i in xrange(max_processes)]
+
+        self.priorities = priorities
 
         # Initialize all locks that could be used
         manager = multiprocessing.Manager()
@@ -91,7 +100,7 @@ class Kendo():
             self.clocks[pid] += 1
 
         # Increment the process's logical time after acquisition
-        self.clocks[pid] += 1
+        self.clocks[pid] += self.priorities[pid]
 
     def det_mutex_unlock(self, pid, lock_number):
         """Deterministically unlock a mutex.
