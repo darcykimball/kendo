@@ -30,6 +30,8 @@ def run_varying_increments(arbitrator, min_inc, max_inc, step):
 
         print "*** Running threads with priorities = ", priorities, " ***"
         arbitrator.run()
+
+        arbitrator.reset()
         
 
 
