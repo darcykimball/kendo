@@ -1,5 +1,6 @@
 #!/usr/bin/python2
 
+import sys
 import random
 import time
 
@@ -85,18 +86,24 @@ def sanity_check():
 if __name__ == "__main__":
     import kendo
     import tests
-
-    #sanity_check()
+    
+    if len(sys.argv) <= 1:
+        sanity_check()
+        sys.exit(0)
     
     # Get command-line args
     parser = tests.setup_parser()
-    parser.add_argument('n_threads', metavar='N_THREADS', type=int, \
+    parser.add_argument('--n_threads', metavar='N_THREADS', type=int, \
             help='number of threads to use')
-    parser.add_argument('work_times', metavar='WORK_TIME', type=float, \
+    parser.add_argument('--work_times', metavar='WORK_TIME', type=float, \
             nargs='+', help='simulated work time (sec)')
     args = parser.parse_args()
 
-    assert len(args.work_times) == args.n_threads
+    if args.work_times:
+        assert len(args.work_times) == args.n_threads
+    else:
+        args.work_times = [0 for i in xrange(args.n_threads)]
+        args.crit_times = [0 for i in xrange(args.n_threads)]
 
     # Setup simulation
     kendo_arbitrator = kendo.Kendo(max_processes=args.n_threads, num_locks=1, \

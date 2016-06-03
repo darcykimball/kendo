@@ -11,11 +11,11 @@ def setup_parser():
     Returns the arg parser
     """
     parser = argparse.ArgumentParser(description="Simulate threaded apps")
-    parser.add_argument('min_inc', metavar='MIN_INC', type=int, \
+    parser.add_argument('--min_inc', metavar='MIN_INC', type=int, \
                                 help='minimum logical time increment')
-    parser.add_argument('max_inc', metavar='MAX_INC', type=int, \
+    parser.add_argument('--max_inc', metavar='MAX_INC', type=int, \
                                 help='maximum logical time increment')
-    parser.add_argument('step_inc', metavar='STEP_INC', type=int, \
+    parser.add_argument('--step_inc', metavar='STEP_INC', type=int, \
                                 help='step amount for logical time increments \
                                 between simulations')
     

@@ -1,9 +1,11 @@
 #!/usr/bin/python2
 
+import sys
 import time
 
 class LoopProcess():
-    """A simple process that simulates nested locking."""
+    """A simple process that alternates between doing independent work and
+    being inside a critical section."""
 
     def __init__(self, arbitrator, lock_num, crit_time=0, work_time=0, num_iterations=3):
         """Construct a LoopProcess.
@@ -46,8 +48,8 @@ class LoopProcess():
 
         print "LoopProcess, PID = ", self.pid, " done!"
 
-if __name__ == "__main__":
-    import kendo
+def sanity_check():
+    """A basic test"""
 
     print "Testing LoopProcess..."
 
@@ -60,3 +62,45 @@ if __name__ == "__main__":
     kendo_arbitrator.run()
 
     print "Done testing LoopProcess!"
+
+if __name__ == "__main__":
+    import kendo
+    import tests
+    
+    if len(sys.argv) <= 1:
+        sanity_check()
+        sys.exit(0)
+
+    # Get command-line args
+    parser = tests.setup_parser()
+    parser.add_argument('--n_threads', metavar='N_THREADS', type=int, \
+            help='number of threads to use')
+    parser.add_argument('--crit_times', metavar='CRIT_TIME', type=float, \
+            nargs='+', help='simulated critical section time (sec)')
+    parser.add_argument('--work_times', metavar='WORK_TIME', type=float, \
+            nargs='+', help='simulated work time (sec)')
+    args = parser.parse_args()
+
+    if args.work_times and args.crit_times:
+        assert len(args.work_times) == args.n_threads == len(args.crit_times)
+    else:
+        args.work_times = [0 for i in xrange(args.n_threads)]
+        args.crit_times = [0 for i in xrange(args.n_threads)]
+
+    # Setup simulation
+    kendo_arbitrator = kendo.Kendo(max_processes=args.n_threads, num_locks=1, \
+            debug=True)
+
+    processes = []
+    for i in xrange(args.n_threads):
+        processes.append(LoopProcess(kendo_arbitrator, 0, \
+                crit_time=args.crit_times[i], \
+                work_time=args.work_times[i]))
+
+    times = tests.run_varying_increments(kendo_arbitrator, args.min_inc, \
+            args.max_inc, args.step_inc)
+
+    print "Result times:"
+    for p, t in times:
+        print p, t
+
