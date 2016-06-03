@@ -1,5 +1,6 @@
 #!/usr/bin/python2
 
+import sys
 import multiprocessing
 
 class Kendo():
@@ -67,12 +68,10 @@ class Kendo():
             self.wait_for_turn(pid)
 
             if self.debug:
-                self.global_lock.acquire()
-                print "Process", pid, "'s Turn with Lock", lock_number
-                print "CLOCKS", self.clocks
-                print "LAST RELEASE TIME", self.lrlt_list
-                print '\n'
-                self.global_lock.release()
+                self._log( \
+                    "Process", pid, "'s Turn with Lock", lock_number \
+                    , "CLOCKS", self.clocks \
+                    , "LAST RELEASE TIME", self.lrlt_list)
 
             # TODO: docs
             self.global_lock.acquire()
@@ -87,11 +86,9 @@ class Kendo():
                     self.global_lock.release()
                 else:
                     if self.debug:
-                        self.global_lock.acquire()
-                        print "Process", pid, "Locking Lock", lock_number
-                        print "CLOCKS", self.clocks
-                        print '\n'
-                        self.global_lock.release()
+                        self._log( \
+                            "Process", pid, "Locking Lock", lock_number \
+                            , "CLOCKS", self.clocks)
                     break
             else:
                 self.global_lock.release()
@@ -101,6 +98,9 @@ class Kendo():
 
         # Increment the process's logical time after acquisition
         self.clocks[pid] += self.priorities[pid]
+
+        # Log
+        self._log("ORDER_LOG: ", "pid = ", pid, " acquired lock ", lock_number)
 
     def det_mutex_unlock(self, pid, lock_number):
         """Deterministically unlock a mutex.
@@ -124,6 +124,9 @@ class Kendo():
             print '\n'
 
         self.global_lock.release()
+
+        # Log
+        self._log("ORDER_LOG: ", "pid = ", pid, " released lock ", lock_number)
 
     def try_lock(self, lock_number):
         """Try to obtain a lock.
@@ -155,14 +158,6 @@ class Kendo():
         # Spin while it's either not its turn, or it has to wait until a certain
         # logical time.
         while True:
-            if self.debug:
-            	self.global_lock.acquire()
-            	'''
-            	print "PID", "CLOCK VALUE"
-                print pid, self.clocks
-                '''
-                self.global_lock.release()
-        
             if process_clock_value == min(self.clocks) and pid == self.clocks.index(min(self.clocks)):
                 break
 
@@ -179,7 +174,7 @@ class Kendo():
         """Run all processes"""
 
         if self.debug:
-            print "Starting to run all processes..."
+            self._log("Starting to run all processes...")
 
         threads = []
 
@@ -192,7 +187,7 @@ class Kendo():
             t.join()
 
         if self.debug:
-            print "Done!"
+            self._log("Done!")
 
     def register_process(self, process):
         """Register a process to be run with this arbitrator
@@ -215,6 +210,15 @@ class Kendo():
         """
         
         self.shared_mem[name] = value
+
+    def _log(self, *args):
+        """Output for debugging"""
+        self.global_lock.acquire()
+        for a in args:
+            sys.stdout.write(str(a))
+            sys.stdout.write(' ')
+        sys.stdout.write('\n')
+        self.global_lock.release()
 
 if __name__ == "__main__":
     pass
