@@ -1,20 +1,24 @@
 #!/usr/bin/python2
 
+import sys
 import multiprocessing
 
 class Kendo():
     """Arbitrator through which all lock requests must go through.
 
     Members:
+    manager - multiprocessing Manager
     num_locks - number of available locks
     clocks    - deterministic logical times for each process
     lrlt_list - last release times for each lock
     lock_held_list - list of which locks are held/free
+    init_shared_mem - initial shared memory state
     shared_mem - shared memory map
     priorities - thread 'priorities' for acquiring locks
     """
 
-    def __init__(self, max_processes, num_locks, priorities=None, debug = False):
+    def __init__(self, max_processes, num_locks, priorities=None, \
+            debug=False, init_shared_mem=dict()):
         """Initialize a Kendo arbitrator.
 
         Args:
@@ -22,6 +26,7 @@ class Kendo():
         num_locks     - number of locks available to all processes
         debug         - whether or not to be verbose
         priorities    - iterable of thread priorities
+        init_shared_mem - initial shared memory state
         """
 
         # Create a global mutex for bookkeeping and dumping debug messages
@@ -30,6 +35,7 @@ class Kendo():
         self.debug = debug
         self.num_locks = num_locks
         self.max_processes = max_processes
+        self.init_shared_mem = init_shared_mem
         self.processes = []
 
         # Initialize priorities. By default, every thread has the same
@@ -40,20 +46,28 @@ class Kendo():
         self.priorities = priorities
 
         # Initialize all locks that could be used
-        manager = multiprocessing.Manager()
-        self.locks = [manager.Lock() for i in xrange(num_locks)]
+        self.manager = multiprocessing.Manager()
+        self.locks = [self.manager.Lock() for i in xrange(num_locks)]
 
         # Initialize shared memory
-        self.shared_mem = manager.dict()
-        
+        self.shared_mem = self.manager.dict(init_shared_mem)
+
         # Initialize deterministic logical clocks
-        self.clocks = manager.list([0] * max_processes)
+        self.clocks = self.manager.list([0] * max_processes)
 
         # Initialize lock release times
-        self.lrlt_list = manager.list([0] * num_locks)
+        self.lrlt_list = self.manager.list([0] * num_locks)
 
         # ...and lock statuses
-        self.lock_held_list = manager.list([False] * num_locks)
+        self.lock_held_list = self.manager.list([False] * num_locks)
+
+    def reset(self):
+        """Reset the arbitrator for another run()"""
+
+        self.shared_mem = self.manager.dict(self.init_shared_mem)
+        self.clocks = self.manager.list([0] * len(self.clocks))
+        self.lrlt_list = self.manager.list([0] * self.num_locks)
+        self.lock_held_list = self.manager.list([False] * self.num_locks)
 
     def det_mutex_lock(self, pid, lock_number):
         """Attempt to acquire a mutex
@@ -67,12 +81,10 @@ class Kendo():
             self.wait_for_turn(pid)
 
             if self.debug:
-                self.global_lock.acquire()
-                print "Process", pid, "'s Turn with Lock", lock_number
-                print "CLOCKS", self.clocks
-                print "LAST RELEASE TIME", self.lrlt_list
-                print '\n'
-                self.global_lock.release()
+                self._log( \
+                    "Process", pid, "'s Turn with Lock", lock_number \
+                    , "CLOCKS", self.clocks \
+                    , "LAST RELEASE TIME", self.lrlt_list)
 
             # TODO: docs
             self.global_lock.acquire()
@@ -87,11 +99,9 @@ class Kendo():
                     self.global_lock.release()
                 else:
                     if self.debug:
-                        self.global_lock.acquire()
-                        print "Process", pid, "Locking Lock", lock_number
-                        print "CLOCKS", self.clocks
-                        print '\n'
-                        self.global_lock.release()
+                        self._log( \
+                            "Process", pid, "Locking Lock", lock_number \
+                            , "CLOCKS", self.clocks)
                     break
             else:
                 self.global_lock.release()
@@ -101,6 +111,9 @@ class Kendo():
 
         # Increment the process's logical time after acquisition
         self.clocks[pid] += self.priorities[pid]
+
+        # Log
+        self._log("ORDER_LOG: ", "pid = ", pid, " acquired lock ", lock_number)
 
     def det_mutex_unlock(self, pid, lock_number):
         """Deterministically unlock a mutex.
@@ -124,6 +137,9 @@ class Kendo():
             print '\n'
 
         self.global_lock.release()
+
+        # Log
+        self._log("ORDER_LOG: ", "pid = ", pid, " released lock ", lock_number)
 
     def try_lock(self, lock_number):
         """Try to obtain a lock.
@@ -155,14 +171,6 @@ class Kendo():
         # Spin while it's either not its turn, or it has to wait until a certain
         # logical time.
         while True:
-            if self.debug:
-            	self.global_lock.acquire()
-            	'''
-            	print "PID", "CLOCK VALUE"
-                print pid, self.clocks
-                '''
-                self.global_lock.release()
-        
             if process_clock_value == min(self.clocks) and pid == self.clocks.index(min(self.clocks)):
                 break
 
@@ -179,7 +187,7 @@ class Kendo():
         """Run all processes"""
 
         if self.debug:
-            print "Starting to run all processes..."
+            self._log("Starting to run all processes...")
 
         threads = []
 
@@ -192,7 +200,7 @@ class Kendo():
             t.join()
 
         if self.debug:
-            print "Done!"
+            self._log("Done!")
 
     def register_process(self, process):
         """Register a process to be run with this arbitrator
@@ -215,6 +223,15 @@ class Kendo():
         """
         
         self.shared_mem[name] = value
+
+    def _log(self, *args):
+        """Output for debugging"""
+        self.global_lock.acquire()
+        for a in args:
+            sys.stdout.write(str(a))
+            sys.stdout.write(' ')
+        sys.stdout.write('\n')
+        self.global_lock.release()
 
 if __name__ == "__main__":
     pass
