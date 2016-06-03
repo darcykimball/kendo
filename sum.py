@@ -90,24 +90,27 @@ if __name__ == "__main__":
     
     # Get command-line args
     parser = tests.setup_parser()
-    parser.add_argument('work_time', metavar='WORK_TIME', type=float, \
-            help='simulated work time (sec)')
+    parser.add_argument('n_threads', metavar='N_THREADS', type=int, \
+            help='number of threads to use')
+    parser.add_argument('work_times', metavar='WORK_TIME', type=float, \
+            nargs='+', help='simulated work time (sec)')
     args = parser.parse_args()
 
+    assert len(args.work_times) == args.n_threads
+
     # Setup simulation
-    # FIXME: make more parameterizable (allow ranges of work times)
+    kendo_arbitrator = kendo.Kendo(max_processes=args.n_threads, num_locks=1, \
+            debug=True, init_shared_mem={"total_sum": 0})
 
-    kendo_arbitrator = kendo.Kendo(max_processes=4, num_locks=1, debug=True, \
-            init_shared_mem={"total_sum": 0})
-    process1 = SumProcess(kendo_arbitrator, 0, xrange(10000), \
-            work_time=args.work_time)
-    process2 = SumProcess(kendo_arbitrator, 0, xrange(10000, 20000), \
-            work_time=args.work_time)
-    process3 = SumProcess(kendo_arbitrator, 0, xrange(20000, 30000), \
-            work_time=args.work_time)
-    process4 = SumProcess(kendo_arbitrator, 0, xrange(30000, 40000), \
-            work_time=args.work_time)
+    processes = []
+    for i in xrange(args.n_threads):
+        processes.append(SumProcess(kendo_arbitrator, 0, \
+                xrange(i*10000, 10000*(i+1)), \
+                work_time=args.work_times[i]))
 
-
-    tests.run_varying_increments(kendo_arbitrator, args.min_inc, \
+    times = tests.run_varying_increments(kendo_arbitrator, args.min_inc, \
             args.max_inc, args.step_inc)
+
+    print "Result times:"
+    for p, t in times:
+        print p, t

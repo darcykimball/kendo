@@ -1,7 +1,9 @@
 #!/usr/bin/python2
 
-import kendo
+import time
 import argparse
+
+import kendo
 
 def setup_parser():
     """Setup parser for reading parameters common to all tests
@@ -22,18 +24,27 @@ def setup_parser():
 def run_varying_increments(arbitrator, min_inc, max_inc, step):
     """Run a bunch of simulations varying logical time increments between
     threads.
+
+    Returns a list of the results (priorities/time pairs)
     """
+
+    times = []
     
     for priorities in permutationN(len(arbitrator.processes), min_inc, \
             max_inc, step):
         arbitrator.priorities = priorities
 
         print "*** Running threads with priorities = ", priorities, " ***"
+
+        begin = time.time()
         arbitrator.run()
+        end = time.time()
+
+        times.append((priorities, end - begin))     
 
         arbitrator.reset()
-        
 
+    return times
 
 def permutationN(n, min_val, max_val, step):
     for x in xrange(min_val, max_val, step):
