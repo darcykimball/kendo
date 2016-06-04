@@ -11,6 +11,9 @@ def setup_parser():
     Returns the arg parser
     """
     parser = argparse.ArgumentParser(description="Simulate threaded apps")
+    parser.add_argument('--n_samples', metavar='MIN_INC', type=int, \
+                                help='number of samples to collect for each \
+                                set of parameters')
     parser.add_argument('--min_inc', metavar='MIN_INC', type=int, \
                                 help='minimum logical time increment')
     parser.add_argument('--max_inc', metavar='MAX_INC', type=int, \
@@ -21,7 +24,7 @@ def setup_parser():
     
     return parser
 
-def run_varying_increments(arbitrator, min_inc, max_inc, step):
+def run_varying_increments(arbitrator, min_inc, max_inc, step, n_samples):
     """Run a bunch of simulations varying logical time increments between
     threads.
 
@@ -36,13 +39,18 @@ def run_varying_increments(arbitrator, min_inc, max_inc, step):
 
         print "*** Running threads with priorities = ", priorities, " ***"
 
-        begin = time.time()
-        arbitrator.run()
-        end = time.time()
+        time_taken = 0
+        for i in xrange(n_samples):
+            begin = time.time()
+            arbitrator.run()
+            end = time.time()
 
-        times.append((priorities, end - begin))     
+            time_taken += end - begin
 
-        arbitrator.reset()
+            arbitrator.reset()
+
+        # Save the average
+        times.append((priorities, time_taken/n_samples))     
 
     return times
 
@@ -53,3 +61,19 @@ def permutationN(n, min_val, max_val, step):
         else:
             for rest in permutationN(n - 1, min_val, max_val, step):
                 yield rest + [x]
+
+def seqFromGen(generators):
+    if len(generators) == 1:
+        for val in generators[0]:
+            yield [val]
+    else:
+        for val in generators[0]:
+            print 'val = ', val
+            for rest in seqFromGen(generators[1:]):
+                print 'rest = ', rest
+                yield [val] + rest
+        
+def frange(min_val, max_val, step):
+    while min_val < max_val:
+        yield min_val
+        min_val += step

@@ -113,7 +113,8 @@ class Kendo():
         self.clocks[pid] += self.priorities[pid]
 
         # Log
-        self._log("ORDER_LOG: ", "pid = ", pid, " acquired lock ", lock_number)
+        if self.debug:
+            self._log("ORDER_LOG: ", "pid = ", pid, " acquired lock ", lock_number)
 
     def det_mutex_unlock(self, pid, lock_number):
         """Deterministically unlock a mutex.
@@ -139,7 +140,8 @@ class Kendo():
         self.global_lock.release()
 
         # Log
-        self._log("ORDER_LOG: ", "pid = ", pid, " released lock ", lock_number)
+        if self.debug: 
+            self._log("ORDER_LOG: ", "pid = ", pid, " released lock ", lock_number)
 
     def try_lock(self, lock_number):
         """Try to obtain a lock.
