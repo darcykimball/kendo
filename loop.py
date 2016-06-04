@@ -120,17 +120,19 @@ if __name__ == "__main__":
     crit_time_generators = \
             [tests.frange(args.crit_times_min[i], args.crit_times_max[i], \
             args.crit_time_step) for i in xrange(args.n_threads)]
+    
+    works = list(itertools.product(*work_time_generators))
+    crits = list(itertools.product(*crit_time_generators))
 
     # Setup simulations
-    for work_times in itertools.product(*work_time_generators):
-        for crit_times in itertools.product(*crit_time_generators):
-            print "work_times = ", work_times
-            print "crit_times = ", crit_times
+    for work_times in works:
+        for crit_times in crits:
+            print "::: work_times = " ,work_times
+            print "::: crit_times = " ,crit_times
 
             kendo_arbitrator = kendo.Kendo(max_processes=args.n_threads, \
                     num_locks=1, \
                     debug=False)
-
             processes = []
             for i in xrange(args.n_threads):
                 processes.append(LoopProcess(kendo_arbitrator, 0, \
@@ -142,6 +144,9 @@ if __name__ == "__main__":
                     args.max_inc, args.step_inc, args.n_samples)
 
             print "Result times:"
+            fmt = ', '.join( \
+                    ['{' + str(i) +  ':.5f}' for i in xrange(args.n_threads)])
             for p, t in times:
-                print p, t
+                print fmt.format(*work_times), fmt.format(*crit_times), \
+                        fmt.format(*p), '{0:5f}, '.format(t)
 

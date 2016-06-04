@@ -37,7 +37,7 @@ def run_varying_increments(arbitrator, min_inc, max_inc, step, n_samples):
             max_inc, step):
         arbitrator.priorities = priorities
 
-        print "*** Running threads with priorities = ", priorities, " ***"
+        #print "*** Running threads with priorities = ", priorities, " ***"
 
         time_taken = 0
         for i in xrange(n_samples):
